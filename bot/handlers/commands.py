@@ -61,17 +61,16 @@ def handle_health() -> str:
 
 
 def handle_labs() -> str:
-    """List all available labs"""
+    """List all available labs with full titles"""
     try:
-        labs = lms_client.get_labs()
+        labs_with_titles = lms_client.get_labs_with_titles()
         
-        if not labs:
+        if not labs_with_titles:
             return "📚 No labs found in the system. Please run ETL sync first."
         
         result = "📚 **Available Labs**\n\n"
-        for lab in labs:
-            lab_num = lab.replace("lab-", "").upper()
-            result += f"• `{lab}` (Lab {lab_num})\n"
+        for short_name, full_title in labs_with_titles:
+            result += f"• `{short_name}` — {full_title}\n"
         
         return result
     except Exception as e:
@@ -82,7 +81,6 @@ def handle_labs() -> str:
             return "❌ Authentication failed. Check your LMS_API_KEY in .env.bot.secret"
         else:
             return f"❌ Failed to fetch labs: {error_msg}"
-
 
 def handle_scores(lab_name: Optional[str] = None) -> str:
     """Get scores for a specific lab"""
@@ -97,11 +95,14 @@ def handle_scores(lab_name: Optional[str] = None) -> str:
             return "❌ Please specify a lab name.\nExample: /scores lab-04"
     
     try:
+        # Get labs with titles for better error message
+        labs_with_titles = lms_client.get_labs_with_titles()
+        lab_titles_dict = dict(labs_with_titles)
+        
         # Verify lab exists
-        labs = lms_client.get_labs()
-        if lab_name not in labs:
-            available = ", ".join(labs[:5])
-            if len(labs) > 5:
+        if lab_name not in lab_titles_dict:
+            available = ", ".join(list(lab_titles_dict.keys())[:5])
+            if len(lab_titles_dict) > 5:
                 available += "..."
             return f"❌ Lab '{lab_name}' not found.\nAvailable labs: {available}"
         
@@ -112,7 +113,8 @@ def handle_scores(lab_name: Optional[str] = None) -> str:
             return f"📊 No pass rate data available for {lab_name.upper()}."
         
         # Format the response
-        result = f"📊 **Pass Rates for {lab_name.upper()}**\n\n"
+        full_title = lab_titles_dict[lab_name]
+        result = f"📊 **Pass Rates for {full_title}**\n\n"
         
         for task_name, avg_score in pass_rates.items():
             # Format with one decimal place

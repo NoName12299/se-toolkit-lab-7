@@ -5,11 +5,12 @@ Telegram bot entry point with --test mode for offline verification
 
 import sys
 import argparse
-from telegram.ext import Application, CommandHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from handlers.commands import (
     handle_start, handle_help, handle_health,
     handle_labs, handle_scores, handle_unknown
 )
+from handlers.natural_language import handle_message
 from config import config
 
 
@@ -21,10 +22,15 @@ def parse_args():
         metavar="COMMAND",
         help="Test mode: run command and print response to stdout"
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Print debug info to stderr"
+    )
     return parser.parse_args()
 
 
-def process_command_test_mode(command: str) -> str:
+def process_command_test_mode(command: str, debug: bool = False) -> str:
     """
     Process a command in test mode (no Telegram connection)
     Returns the response text
@@ -47,8 +53,23 @@ def process_command_test_mode(command: str) -> str:
         return handle_labs()
     elif cmd == "/scores":
         return handle_scores(args if args else None)
-    else:
+    elif cmd.startswith("/"):
         return handle_unknown(command)
+    else:
+        # Natural language query
+        response = handle_message(command, debug=debug)
+        return response if response else handle_unknown(command)
+
+
+async def message_handler(update, context):
+    """Handle regular text messages (not commands)"""
+    user_message = update.message.text
+    response = handle_message(user_message, debug=False)
+    
+    if response:
+        await update.message.reply_text(response)
+    else:
+        await update.message.reply_text("I'm not sure how to help. Try /help for commands.")
 
 
 def main():
@@ -57,7 +78,7 @@ def main():
     
     # Test mode
     if args.test:
-        response = process_command_test_mode(args.test)
+        response = process_command_test_mode(args.test, debug=args.debug)
         print(response)
         sys.exit(0)
     
@@ -80,8 +101,15 @@ def main():
     application.add_handler(CommandHandler("labs", lambda u, c: u.message.reply_text(handle_labs())))
     application.add_handler(CommandHandler("scores", lambda u, c: u.message.reply_text(handle_scores(" ".join(c.args) if c.args else None))))
     
+    # Add message handler for natural language
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+    
     # Start the bot
     print("✅ Bot is running. Press Ctrl+C to stop.")
+    print("   Now you can ask questions like:")
+    print("   - 'what labs are available?'")
+    print("   - 'show me scores for lab 4'")
+    print("   - 'which lab has the lowest pass rate?'")
     application.run_polling()
 
 

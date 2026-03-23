@@ -13,3 +13,7 @@ __pycache__/
 tmp
 
 **/settings.local.json
+*.secret
+bot/.venv
+bot/__pycache__/
+bot/bot.log

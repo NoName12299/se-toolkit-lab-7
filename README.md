@@ -91,3 +91,17 @@ By the end of this lab, you should be able to say:
 2. [Backend Integration](./lab/tasks/required/task-2.md) — P0: slash commands + real data
 3. [Intent-Based Natural Language Routing](./lab/tasks/required/task-3.md) — P1: LLM tool use
 4. [Containerize and Document](./lab/tasks/required/task-4.md) — P3: containerize + deploy
+## Deployment
+
+### Prerequisites
+- Docker and Docker Compose installed
+- Git
+- Telegram Bot Token (from @BotFather)
+- Qwen Code API running on port 42005 (see setup guide)
+
+### Environment Setup
+
+1. Clone the repository:
+```bash
+git clone https://github.com/YOUR_USERNAME/se-toolkit-lab-7.git
+cd se-toolkit-lab-7
