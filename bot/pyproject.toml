@@ -14,9 +14,6 @@ dependencies = [
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-[project.scripts]
-bot = "bot:main"
-
 [tool.setuptools]
 py-modules = ["bot", "config"]
-packages = ["handlers"]
+packages = ["handlers", "services"]
