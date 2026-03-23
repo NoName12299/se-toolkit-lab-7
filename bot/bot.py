@@ -8,8 +8,9 @@ import argparse
 import asyncio
 from telegram.ext import Application, CommandHandler
 from handlers.commands import (
-    handle_start, handle_help, handle_health,
-    handle_labs, handle_scores, handle_unknown
+    handle_start, handle_help, handle_health, handle_health_async,
+    handle_labs, handle_labs_async, handle_scores, handle_scores_async,
+    handle_unknown
 )
 from config import config
 
@@ -43,13 +44,33 @@ def process_command_test_mode(command: str) -> str:
     elif cmd == "/help":
         return handle_help()
     elif cmd == "/health":
-        return handle_health()
+        # For test mode, we need to run async function
+        return asyncio.run(handle_health_async())
     elif cmd == "/labs":
-        return handle_labs()
+        return asyncio.run(handle_labs_async())
     elif cmd == "/scores":
-        return handle_scores(args if args else None)
+        return asyncio.run(handle_scores_async(args if args else None))
     else:
         return handle_unknown(command)
+
+
+async def health_callback(update, context):
+    """Telegram handler for /health"""
+    response = await handle_health_async()
+    await update.message.reply_text(response)
+
+
+async def labs_callback(update, context):
+    """Telegram handler for /labs"""
+    response = await handle_labs_async()
+    await update.message.reply_text(response)
+
+
+async def scores_callback(update, context):
+    """Telegram handler for /scores"""
+    lab_name = " ".join(context.args) if context.args else None
+    response = await handle_scores_async(lab_name)
+    await update.message.reply_text(response)
 
 
 def main():
@@ -67,7 +88,7 @@ def main():
     
     # Check if token is configured
     if not config.bot_token:
-        print("ERROR: BOT_TOKEN not set in .env.bot.secret")
+        print("❌ ERROR: BOT_TOKEN not set in .env.bot.secret")
         print("Please create .env.bot.secret with BOT_TOKEN=<your-token>")
         sys.exit(1)
     
@@ -77,14 +98,12 @@ def main():
     # Add command handlers
     application.add_handler(CommandHandler("start", lambda u, c: u.message.reply_text(handle_start())))
     application.add_handler(CommandHandler("help", lambda u, c: u.message.reply_text(handle_help())))
-    application.add_handler(CommandHandler("health", lambda u, c: u.message.reply_text(handle_health())))
-    application.add_handler(CommandHandler("labs", lambda u, c: u.message.reply_text(handle_labs())))
-    application.add_handler(CommandHandler("scores", lambda u, c: u.message.reply_text(
-        handle_scores(" ".join(c.args) if c.args else None)
-    )))
+    application.add_handler(CommandHandler("health", health_callback))
+    application.add_handler(CommandHandler("labs", labs_callback))
+    application.add_handler(CommandHandler("scores", scores_callback))
     
     # Start the bot
-    print("Bot is running. Press Ctrl+C to stop.")
+    print("✅ Bot is running. Press Ctrl+C to stop.")
     application.run_polling()
 
 
